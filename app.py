@@ -38,6 +38,16 @@ metrics  = payload["metrics"]
 df       = load_data()
 raw      = load_raw()
 
+# Prepare raw2 globally so all tabs can use it
+raw2 = raw.copy()
+raw2["literacy_rate"] = raw2["literate education"] / raw2["Population"]
+raw2["gender_ratio"]  = raw2["Female"] / raw2["Male"]
+raw2["Male_pct"]      = raw2["Male"] / raw2["Population"] * 100
+raw2["Female_pct"]    = raw2["Female"] / raw2["Population"] * 100
+religion_cols = ["Hindus","Muslims","Christians","Sikhs","Buddhists","Jains"]
+for col in religion_cols:
+    raw2[col+"_pct"] = raw2[col] / raw2["Population"] * 100
+
 CLASS_COLORS = {"Low": "#E53935", "Medium": "#FF9800", "High": "#4CAF50"}
 CLASS_EMOJI  = {"Low": "🔴", "Medium": "🟡", "High": "🟢"}
 CLASS_RANGE  = {"Low": "< 60%", "Medium": "60–80%", "High": "> 80%"}
@@ -310,15 +320,6 @@ with tab4:
     st.subheader("📈 Exploratory Data Analysis — Census 2011")
     st.markdown("All charts built during the exploration phase. Data: 640 Indian districts.")
     st.divider()
-
-    raw2 = raw.copy()
-    raw2["literacy_rate"] = raw2["literate education"] / raw2["Population"]
-    raw2["gender_ratio"]  = raw2["Female"] / raw2["Male"]
-    raw2["Male_pct"]      = raw2["Male"] / raw2["Population"] * 100
-    raw2["Female_pct"]    = raw2["Female"] / raw2["Population"] * 100
-    religion_cols = ["Hindus","Muslims","Christians","Sikhs","Buddhists","Jains"]
-    for col in religion_cols:
-        raw2[col+"_pct"] = raw2[col] / raw2["Population"] * 100
 
     # ── CHART 1: Religion heatmap ────────────────────────────
     st.markdown("### 1. Religion-wise Population Distribution — Top 50 Districts")
