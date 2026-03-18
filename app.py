@@ -384,23 +384,23 @@ with tab4:
              fontsize=11, va="top", color="gray")
     plt.tight_layout()
     st.pyplot(fig8); plt.close()
+    st.divider()
 
-st.divider()
-st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier · scikit-learn")
+    # ── CHART 4: Scatter major districts ─────────────────────
     st.markdown("### 4. Literacy vs Population — Major Indian Districts")
     major = ["Mumbai","New Delhi","Bangalore","Chennai","Hyderabad","Pune","Kolkata",
              "Ahmedabad","Jaipur","Surat","Agra","Lucknow","Srinagar","Indore",
              "Bhopal","Patna","Vadodara","Nagpur","Ludhiana","Amritsar","Gurgaon","Faridabad"]
     df7 = raw2[raw2["District name"].isin(major)].copy()
-    df7["Pop_millions"] = df7["Population"]/1e6
+    df7["Pop_millions"] = df7["Population"] / 1e6
 
-    fig7, ax7 = plt.subplots(figsize=(11,7))
+    fig7, ax7 = plt.subplots(figsize=(11, 7))
     ax7.scatter(df7["literacy_rate"]*100, df7["Pop_millions"],
                 color="#4C72B0", alpha=0.75, s=80, edgecolors="white", linewidths=0.8)
     for _, row in df7.iterrows():
         ax7.annotate(row["District name"],
                      (row["literacy_rate"]*100, row["Pop_millions"]),
-                     fontsize=9, xytext=(5,3), textcoords="offset points")
+                     fontsize=9, xytext=(5, 3), textcoords="offset points")
     ax7.set_xlabel("Literacy Rate (%)")
     ax7.set_ylabel("Population (Millions)")
     ax7.set_title("Literacy vs Population\nMajor Indian Districts", fontsize=16, fontweight="bold")
@@ -409,7 +409,7 @@ st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier 
     st.pyplot(fig7); plt.close()
     st.divider()
 
-    # ── CHART 8: Hexbin all 640 ───────────────────────────────
+    # ── CHART 5: Age composition Mumbai vs Delhi ──────────────
     st.markdown("### 5. Age-wise Population Composition — Mumbai vs New Delhi")
     age_cols = ["age 0-29","age 30-49","age 50>"]
     df3 = raw2[raw2["District name"].isin(["Mumbai","New Delhi"])].copy()
@@ -427,7 +427,7 @@ st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier 
             ax3c.text(bar.get_x()+bar.get_width()/2, bar.get_y()+bar.get_height()/2,
                       f"{val:.1f}%", ha="center", va="center", fontsize=13, color="white", fontweight="bold")
         bottom += df3_pct[age].values
-    ax3c.set_ylim(0,100)
+    ax3c.set_ylim(0, 100)
     ax3c.set_ylabel("Population Share (%)")
     ax3c.set_title("Age-wise Population Composition\nMumbai vs New Delhi", fontsize=16, fontweight="bold")
     ax3c.legend(title="Age Group", fontsize=12)
@@ -437,7 +437,7 @@ st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier 
     st.pyplot(fig3c); plt.close()
     st.divider()
 
-    # ── CHART 4: Age group bar Mumbai vs Pune ────────────────
+    # ── CHART 6: Age group bar Mumbai vs Pune ────────────────
     st.markdown("### 6. Age Group Distribution — Mumbai vs Pune")
     age_pct_cols = ["Age not stated","age 0-29","age 30-49","age 50>"]
     df4 = raw2[raw2["District name"].isin(["Mumbai","Pune"])].copy()
@@ -467,14 +467,13 @@ st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier 
     st.pyplot(fig4); plt.close()
     st.divider()
 
-    # ── CHART 5: Religion Jaipur vs Srinagar ─────────────────
+    # ── CHART 7: Religion Jaipur vs Srinagar ─────────────────
     st.markdown("### 7. Hindu–Muslim Population Share — Jaipur vs Srinagar")
     df5 = raw2[raw2["District name"].isin(["Jaipur","Srinagar"])].copy()
     melt5 = df5.melt(id_vars="District name", value_vars=["Hindus","Muslims"],
                      var_name="Religion", value_name="Pop")
     total5 = melt5.groupby("District name")["Pop"].transform("sum")
     melt5["Percentage"] = melt5["Pop"] / total5 * 100
-
     sns.set_theme(style="whitegrid", context="talk", font_scale=1.1)
     fig5, ax5 = plt.subplots(figsize=(9, 6))
     sns.barplot(data=melt5, x="Religion", y="Percentage", hue="District name",
@@ -494,22 +493,20 @@ st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier 
     st.pyplot(fig5); plt.close()
     st.divider()
 
-    # ── CHART 6: Donut Thiruvananthapuram ────────────────────
+    # ── CHART 8: Donut Thiruvananthapuram ────────────────────
     st.markdown("### 8. Religion-wise Distribution — Thiruvananthapuram")
     city6     = raw2[raw2["District name"] == "Thiruvananthapuram"].iloc[0]
     rel6_vals = [city6[c] for c in ["Hindus","Muslims","Christians","Sikhs"]]
     rel6_pct  = [v/city6["Population"]*100 for v in rel6_vals]
     rel6_lbls = [f"{n}\n{p:.1f}%" for n,p in zip(["Hindu","Muslim","Christian","Sikh"],rel6_pct)]
-
-    fig6, ax6 = plt.subplots(figsize=(7,7))
+    fig6, ax6 = plt.subplots(figsize=(7, 7))
     ax6.pie(rel6_vals, labels=rel6_lbls, colors=["#5B8FF9","#61DDAA","#F4664A","#FAAD14"],
-            startangle=90, wedgeprops=dict(width=0.5),
-            textprops=dict(fontsize=13))
+            startangle=90, wedgeprops=dict(width=0.5), textprops=dict(fontsize=13))
     ax6.set_title("Religion-wise Population Distribution\nThiruvananthapuram",
                   fontsize=16, fontweight="bold", pad=20)
-    ax6.text(0,0,"Census 2011\nPercentage Share", ha="center", va="center", fontsize=11, color="gray")
+    ax6.text(0, 0, "Census 2011\nPercentage Share", ha="center", va="center", fontsize=11, color="gray")
     plt.tight_layout()
     st.pyplot(fig6); plt.close()
-    st.divider()
 
-    # ── CHART 7: Scatter major districts ─────────────────────
+st.divider()
+st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier · scikit-learn")
