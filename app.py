@@ -154,25 +154,54 @@ with tab1:
                 {"<div style='font-size:12px; color:" + c + "; margin-top:6px'>← predicted</div>" if is_pred else ""}
             </div>""", unsafe_allow_html=True)
 
-        # ── Horizontal confidence bar ────────────────────────
-        st.markdown("<br>", unsafe_allow_html=True)
-        fig_p, ax_p = plt.subplots(figsize=(8, 2.2))
-        bars = ax_p.barh(
-            [cls for cls in order],
-            [proba[classes.index(cls)]*100 for cls in order],
-            color=[CLASS_COLORS[cls] for cls in order],
-            height=0.5, edgecolor="white"
-        )
-        for bar, cls in zip(bars, order):
-            val = proba[classes.index(cls)]*100
-            ax_p.text(bar.get_width()+0.5, bar.get_y()+bar.get_height()/2,
-                      f"{val:.1f}%", va="center", fontsize=13, fontweight="bold")
-        ax_p.set_xlim(0, 115)
-        ax_p.set_xlabel("Confidence (%)", fontsize=13)
-        ax_p.spines[["top","right","left"]].set_visible(False)
-        ax_p.tick_params(left=False)
-        plt.tight_layout()
-        st.pyplot(fig_p); plt.close()
+        # ── Interesting facts about this district ────────────
+        st.divider()
+        st.markdown("#### 📌 District snapshot")
+        if mode == "🏙️ Pick existing district":
+            r = raw2[raw2["District name"] == selected].iloc[0] if selected in raw2["District name"].values else None
+            if r is not None:
+                dom_religion = ["Hindus","Muslims","Christians","Sikhs","Buddhists"]
+                dom = max(dom_religion, key=lambda x: r[x])
+                dom_pct = r[dom] / r["Population"] * 100
+                lit_pct = r["literate education"] / r["Population"] * 100
+                gender  = r["Female"] / r["Male"]
+                youth   = r["age 0-29"] / r["Population"] * 100
+                elderly = r["age 50>"] / r["Population"] * 100
+
+                f1, f2, f3, f4, f5 = st.columns(5)
+                f1.metric("Population",       f"{int(r['Population']):,}")
+                f2.metric("Literacy Rate",    f"{lit_pct:.1f}%")
+                f3.metric("Dominant Religion",f"{dom} ({dom_pct:.0f}%)")
+                f4.metric("Gender Ratio",     f"{gender:.3f}")
+                f5.metric("Youth (0–29)",     f"{youth:.1f}%")
+
+                # compare vs national average
+                st.markdown("#### 📊 How does this district compare to national average?")
+                nat_lit    = raw2["literate education"].sum() / raw2["Population"].sum() * 100
+                nat_gender = (raw2["Female"].sum() / raw2["Male"].sum())
+                nat_youth  = raw2["age 0-29"].sum() / raw2["Population"].sum() * 100
+
+                fig_cmp, axes = plt.subplots(1, 3, figsize=(12, 3.5))
+                metrics_cmp = [
+                    ("Literacy Rate (%)", lit_pct, nat_lit),
+                    ("Gender Ratio",      gender,  nat_gender),
+                    ("Youth % (0–29)",    youth,   nat_youth),
+                ]
+                for ax, (title, dist_val, nat_val) in zip(axes, metrics_cmp):
+                    bars_cmp = ax.bar([selected, "National Avg"],
+                                      [dist_val, nat_val],
+                                      color=["#2196F3","#BDBDBD"],
+                                      edgecolor="white", width=0.5)
+                    for b in bars_cmp:
+                        ax.text(b.get_x()+b.get_width()/2, b.get_height()+0.002*nat_val,
+                                f"{b.get_height():.2f}", ha="center", fontsize=12, fontweight="bold")
+                    ax.set_title(title, fontsize=13, fontweight="bold")
+                    ax.spines[["top","right"]].set_visible(False)
+                    ax.tick_params(labelsize=11)
+                plt.tight_layout()
+                st.pyplot(fig_cmp); plt.close()
+        else:
+            st.info("Pick an existing district to see its snapshot and comparison vs national average.")
 
 # ══════════════════════════════════════════
 # TAB 2 — EXPLORE
@@ -341,7 +370,47 @@ with tab4:
     st.divider()
 
     # ── CHART 3: Age composition Mumbai vs Delhi ─────────────
-    st.markdown("### 3. Age-wise Population Composition — Mumbai vs New Delhi")
+    st.markdown("### 3. Literacy Rate vs Population — All 640 Districts (Density)")
+    valid = raw2[raw2["Population"]>0].copy()
+    fig8, ax8 = plt.subplots(figsize=(10,7))
+    hb = ax8.hexbin(valid["literate education"], valid["Population"],
+                    gridsize=30, cmap="viridis", mincnt=1, yscale="log")
+    cb = fig8.colorbar(hb, ax=ax8)
+    cb.set_label("Number of Districts", fontsize=13)
+    ax8.set_xlabel("Literate Population (absolute count)")
+    ax8.set_ylabel("Total Population (log scale)")
+    ax8.set_title("Literacy vs Population Density\nAll 640 Indian Districts", fontsize=16, fontweight="bold")
+    ax8.text(0.02, 0.97, f"Districts: {len(valid)}", transform=ax8.transAxes,
+             fontsize=11, va="top", color="gray")
+    plt.tight_layout()
+    st.pyplot(fig8); plt.close()
+
+st.divider()
+st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier · scikit-learn")
+    st.markdown("### 4. Literacy vs Population — Major Indian Districts")
+    major = ["Mumbai","New Delhi","Bangalore","Chennai","Hyderabad","Pune","Kolkata",
+             "Ahmedabad","Jaipur","Surat","Agra","Lucknow","Srinagar","Indore",
+             "Bhopal","Patna","Vadodara","Nagpur","Ludhiana","Amritsar","Gurgaon","Faridabad"]
+    df7 = raw2[raw2["District name"].isin(major)].copy()
+    df7["Pop_millions"] = df7["Population"]/1e6
+
+    fig7, ax7 = plt.subplots(figsize=(11,7))
+    ax7.scatter(df7["literacy_rate"]*100, df7["Pop_millions"],
+                color="#4C72B0", alpha=0.75, s=80, edgecolors="white", linewidths=0.8)
+    for _, row in df7.iterrows():
+        ax7.annotate(row["District name"],
+                     (row["literacy_rate"]*100, row["Pop_millions"]),
+                     fontsize=9, xytext=(5,3), textcoords="offset points")
+    ax7.set_xlabel("Literacy Rate (%)")
+    ax7.set_ylabel("Population (Millions)")
+    ax7.set_title("Literacy vs Population\nMajor Indian Districts", fontsize=16, fontweight="bold")
+    ax7.grid(True, linestyle="--", alpha=0.4)
+    plt.tight_layout()
+    st.pyplot(fig7); plt.close()
+    st.divider()
+
+    # ── CHART 8: Hexbin all 640 ───────────────────────────────
+    st.markdown("### 5. Age-wise Population Composition — Mumbai vs New Delhi")
     age_cols = ["age 0-29","age 30-49","age 50>"]
     df3 = raw2[raw2["District name"].isin(["Mumbai","New Delhi"])].copy()
     df3_pct = df3.set_index("District name")[age_cols].div(
@@ -369,7 +438,7 @@ with tab4:
     st.divider()
 
     # ── CHART 4: Age group bar Mumbai vs Pune ────────────────
-    st.markdown("### 4. Age Group Distribution — Mumbai vs Pune")
+    st.markdown("### 6. Age Group Distribution — Mumbai vs Pune")
     age_pct_cols = ["Age not stated","age 0-29","age 30-49","age 50>"]
     df4 = raw2[raw2["District name"].isin(["Mumbai","Pune"])].copy()
     for col in age_pct_cols:
@@ -399,7 +468,7 @@ with tab4:
     st.divider()
 
     # ── CHART 5: Religion Jaipur vs Srinagar ─────────────────
-    st.markdown("### 5. Hindu–Muslim Population Share — Jaipur vs Srinagar")
+    st.markdown("### 7. Hindu–Muslim Population Share — Jaipur vs Srinagar")
     df5 = raw2[raw2["District name"].isin(["Jaipur","Srinagar"])].copy()
     melt5 = df5.melt(id_vars="District name", value_vars=["Hindus","Muslims"],
                      var_name="Religion", value_name="Pop")
@@ -426,7 +495,7 @@ with tab4:
     st.divider()
 
     # ── CHART 6: Donut Thiruvananthapuram ────────────────────
-    st.markdown("### 6. Religion-wise Distribution — Thiruvananthapuram")
+    st.markdown("### 8. Religion-wise Distribution — Thiruvananthapuram")
     city6     = raw2[raw2["District name"] == "Thiruvananthapuram"].iloc[0]
     rel6_vals = [city6[c] for c in ["Hindus","Muslims","Christians","Sikhs"]]
     rel6_pct  = [v/city6["Population"]*100 for v in rel6_vals]
@@ -444,43 +513,3 @@ with tab4:
     st.divider()
 
     # ── CHART 7: Scatter major districts ─────────────────────
-    st.markdown("### 7. Literacy vs Population — Major Indian Districts")
-    major = ["Mumbai","New Delhi","Bangalore","Chennai","Hyderabad","Pune","Kolkata",
-             "Ahmedabad","Jaipur","Surat","Agra","Lucknow","Srinagar","Indore",
-             "Bhopal","Patna","Vadodara","Nagpur","Ludhiana","Amritsar","Gurgaon","Faridabad"]
-    df7 = raw2[raw2["District name"].isin(major)].copy()
-    df7["Pop_millions"] = df7["Population"]/1e6
-
-    fig7, ax7 = plt.subplots(figsize=(11,7))
-    ax7.scatter(df7["literacy_rate"]*100, df7["Pop_millions"],
-                color="#4C72B0", alpha=0.75, s=80, edgecolors="white", linewidths=0.8)
-    for _, row in df7.iterrows():
-        ax7.annotate(row["District name"],
-                     (row["literacy_rate"]*100, row["Pop_millions"]),
-                     fontsize=9, xytext=(5,3), textcoords="offset points")
-    ax7.set_xlabel("Literacy Rate (%)")
-    ax7.set_ylabel("Population (Millions)")
-    ax7.set_title("Literacy vs Population\nMajor Indian Districts", fontsize=16, fontweight="bold")
-    ax7.grid(True, linestyle="--", alpha=0.4)
-    plt.tight_layout()
-    st.pyplot(fig7); plt.close()
-    st.divider()
-
-    # ── CHART 8: Hexbin all 640 ───────────────────────────────
-    st.markdown("### 8. Literacy Rate vs Population — All 640 Districts (Density)")
-    valid = raw2[raw2["Population"]>0].copy()
-    fig8, ax8 = plt.subplots(figsize=(10,7))
-    hb = ax8.hexbin(valid["literate education"], valid["Population"],
-                    gridsize=30, cmap="viridis", mincnt=1, yscale="log")
-    cb = fig8.colorbar(hb, ax=ax8)
-    cb.set_label("Number of Districts", fontsize=13)
-    ax8.set_xlabel("Literate Population (absolute count)")
-    ax8.set_ylabel("Total Population (log scale)")
-    ax8.set_title("Literacy vs Population Density\nAll 640 Indian Districts", fontsize=16, fontweight="bold")
-    ax8.text(0.02, 0.97, f"Districts: {len(valid)}", transform=ax8.transAxes,
-             fontsize=11, va="top", color="gray")
-    plt.tight_layout()
-    st.pyplot(fig8); plt.close()
-
-st.divider()
-st.caption("Built with Streamlit · Census 2011 · Gradient Boosting Classifier · scikit-learn")
